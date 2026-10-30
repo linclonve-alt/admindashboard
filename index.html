@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>ebeth admin</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap">
+<style>
+/* ebeth admin: same retro-window look as the main site. Private tool: sign-in + Firestore rules are what protect it. */
+:root{--bg:#fcdcc9;--dot:#f1c2aa;--shell:#fff1e6;--surface:#fffaf5;--surface2:#fde4d5;--line:#7b3f35;--ink:#54291f;--mute:#86584c;--accent:#9fb2ea;--accent-text:#4059b8;--primary:#ffb4a2;--primary-ink:#54291f;--good:#86d1ab;--good-ink:#1f4f3a;--warn:#f3c76b;--crit:#e58a84;--bar:#b9c7ef;--font:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"Courier Prime","Courier New",ui-monospace,monospace;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#24161e;--dot:#33212b;--shell:#2f1f29;--surface:#3a2733;--surface2:#47323f;--line:#efbfa8;--ink:#fde8da;--mute:#cfa99b;--accent:#8aa0e6;--accent-text:#c0cbf8;--primary:#ff9c8a;--primary-ink:#3a1c16;--good:#62c797;--good-ink:#0f2f22;--warn:#c9993a;--crit:#d9736d;--bar:#5568a8;color-scheme:dark}}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;min-height:100vh;background:var(--bg);background-image:radial-gradient(var(--dot) 1.3px,transparent 1.6px);background-size:22px 22px;color:var(--ink);font:15px/1.5 var(--font);padding:14px}
+[hidden]{display:none!important}
+h1,h2{margin:0;font-family:var(--mono)}
+.k{font:700 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.mute{color:var(--mute);font-size:13px}
+
+/* window */
+.win{background:var(--surface);border:2px solid var(--line);border-radius:14px;box-shadow:3px 3px 0 var(--line);min-width:0;overflow:hidden}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px;height:34px;padding:0 12px;background:var(--bar);border-bottom:2px solid var(--line);font:700 12.5px var(--mono)}
+.bar .x{font-size:18px;line-height:1}
+.pad{padding:16px}
+.shell{max-width:1280px;margin:0 auto;display:grid;gap:14px}
+
+/* top bar */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--bar);border:2px solid var(--line);border-radius:18px;box-shadow:6px 6px 0 var(--line);padding:10px 16px}
+.brand{display:flex;align-items:center;gap:10px;font:700 18px var(--mono)}
+.brand svg{width:30px;height:28px}
+.who{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.chip{font:700 12px var(--mono);background:var(--surface);border:2px solid var(--line);border-radius:99px;padding:3px 11px;white-space:nowrap}
+
+/* controls */
+button,.btn{position:relative;font:700 13px var(--font);cursor:pointer;border-radius:11px;border:2px solid var(--line);background:var(--surface);color:var(--ink);padding:6px 13px;box-shadow:0 3px 0 var(--line);transition:transform .12s,box-shadow .12s;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+button:hover{transform:translateY(-1px);box-shadow:0 4px 0 var(--line)}
+button:active{transform:translateY(3px);box-shadow:0 0 0 var(--line)}
+button:disabled{opacity:.5;cursor:default;transform:none}
+.primary{background:var(--primary);color:var(--primary-ink)}
+.ok{background:var(--good);color:var(--good-ink)}
+.bad{background:var(--crit);color:#2a1612}
+.sm{padding:3px 10px;font-size:12px;box-shadow:0 2px 0 var(--line)}
+input,select{font:inherit;font-weight:600;padding:8px 11px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--ink);min-width:0}
+label{display:block;font:700 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-bottom:5px}
+:focus-visible{outline:3px solid var(--accent-text);outline-offset:2px}
+.seg{display:inline-flex;background:var(--surface2);border:2px solid var(--line);border-radius:12px;padding:3px;gap:3px}
+.seg button{border:0;box-shadow:none;background:none;color:var(--mute);padding:4px 12px;border-radius:8px}
+.seg button:hover,.seg button:active{transform:none;box-shadow:none}
+.seg button[aria-pressed="true"]{background:var(--bar);color:var(--ink)}
+
+/* sign in */
+.login{max-width:380px;margin:12vh auto 0}
+.login form{display:grid;gap:12px}
+.login input{width:100%}
+.msg{margin:0;font-weight:700;font-size:13px;color:var(--accent-text)}
+.msg.err{color:#c0392b}
+@media (prefers-color-scheme:dark){.msg.err{color:#ff9c8a}}
+code{font:700 12.5px var(--mono);background:var(--surface2);border:1.5px solid var(--line);border-radius:6px;padding:1px 6px;overflow-wrap:anywhere}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+.stat{padding:14px 16px}
+.stat b{display:block;font:700 28px/1.15 var(--mono);letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin-top:4px}
+.stat small{display:block;color:var(--mute);font-weight:600;margin-top:2px}
+.stat .multi{display:grid;gap:2px;margin-top:4px}
+.stat .multi b{font-size:22px;margin:0}
+
+/* layout */
+.cols{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:980px){.cols{grid-template-columns:minmax(0,1fr)}}
+.tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:12px}
+.tools input{width:min(260px,100%)}
+
+/* tables */
+.tw{overflow-x:auto;border:2px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:640px}
+th{font:700 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mute);text-align:left;padding:8px 12px;background:var(--surface2);border-bottom:2px solid var(--line);white-space:nowrap}
+td{padding:9px 12px;border-top:1.5px dotted var(--line);vertical-align:middle}
+tr:first-child td{border-top:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+td.num{font:700 14px var(--mono)}
+.em{font-weight:700;overflow-wrap:anywhere}
+.sub{display:block;color:var(--mute);font-size:12px;font-weight:600;overflow-wrap:anywhere}
+.acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.pill{display:inline-block;font:700 11px var(--mono);padding:2px 9px;border-radius:99px;border:2px solid var(--line);background:var(--surface2)}
+.pill.pending{background:var(--warn);color:#3a2a08}
+.pill.approved,.pill.on{background:var(--good);color:var(--good-ink)}
+.pill.rejected,.pill.off{background:var(--crit);color:#2a1612}
+.empty{padding:26px 14px;text-align:center;color:var(--mute);font-weight:600}
+.msgc{max-width:280px;overflow-wrap:anywhere;white-space:pre-wrap;font-weight:600;font-size:13.5px}
+.rep{display:block;margin-top:5px;padding:4px 8px;border-radius:8px;border:1.5px solid var(--line);background:var(--bar);font-size:12.5px;font-weight:600;white-space:pre-wrap}
+.rep b{font:700 10px var(--mono);letter-spacing:.06em;text-transform:uppercase;display:block;color:var(--mute)}
+.mod{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;background:rgba(40,20,20,.45);backdrop-filter:blur(4px)}
+.mod .win{width:min(480px,100%);max-height:calc(100dvh - 32px);overflow-y:auto}
+.mod textarea{width:100%;font:inherit;font-weight:600;padding:9px 11px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--ink);resize:vertical;min-height:100px}
+.quote{background:var(--surface2);border:2px solid var(--line);border-radius:12px;padding:8px 12px;font-weight:600;white-space:pre-wrap;overflow-wrap:anywhere}
+.mod .foot{display:flex;justify-content:flex-end;gap:10px;margin-top:12px}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:50;background:var(--ink);color:var(--surface);font:700 13px var(--mono);padding:8px 16px;border-radius:12px;box-shadow:0 4px 0 var(--line)}
+.denied code{display:inline-block;margin:4px 0}
+@media (max-width:560px){body{padding:8px}.top{padding:10px 12px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- 1. SIGN IN -->
+<main class="login win" id="vLogin" hidden>
+  <div class="bar"><span>admin-login.txt</span><span class="x" aria-hidden="true">×</span></div>
+  <form class="pad" id="fLogin" autocomplete="on">
+    <div class="brand"><svg viewBox="0 0 48 44" aria-hidden="true"><path d="M7 21 L8 4 L22 12Z M41 21 L40 4 L26 12Z" fill="#fff6ec" stroke="#7b3f35" stroke-width="2.4" stroke-linejoin="round"/><ellipse cx="24" cy="26" rx="19" ry="15" fill="#fff6ec" stroke="#7b3f35" stroke-width="2.4"/><circle cx="16" cy="25" r="2.3" fill="#4a2620"/><circle cx="32" cy="25" r="2.3" fill="#4a2620"/><path d="M22 29h4l-2 2.6z" fill="#e98a86"/></svg>ebeth admin</div>
+    <p class="mute" style="margin:0">Sign in with the account that has an <code>admins</code> entry in Firestore.</p>
+    <div><label for="em">Email</label><input id="em" type="email" autocomplete="email" required></div>
+    <div><label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password" required></div>
+    <button class="primary" id="go" type="submit">Sign in</button>
+    <p class="msg err" id="lmsg" role="alert" hidden></p>
+  </form>
+</main>
+
+<!-- 2. SIGNED IN BUT NOT AN ADMIN -->
+<main class="login win denied" id="vDenied" hidden>
+  <div class="bar"><span>no-access.txt</span><span class="x" aria-hidden="true">×</span></div>
+  <div class="pad" style="display:grid;gap:10px">
+    <h2>This account is not an admin</h2>
+    <p class="mute" style="margin:0">Signed in as <b id="dMail"></b>. To make it an admin, add a document in Firestore: collection <code>admins</code>, document ID:</p>
+    <code id="dUid"></code>
+    <p class="mute" style="margin:0">with any field (for example <code>role</code> = <code>owner</code>), then reload this page.</p>
+    <button id="dOut" type="button">Sign out</button>
+  </div>
+</main>
+
+<!-- 0. PROBLEM -->
+<main class="login win" id="vErr" hidden>
+  <div class="bar"><span>problem.txt</span><span class="x" aria-hidden="true">×</span></div>
+  <div class="pad" style="display:grid;gap:10px"><h2>Could not start</h2><p class="mute" style="margin:0" id="eTxt"></p><button type="button" onclick="location.reload()">Reload</button></div>
+</main>
+
+<!-- 3. DASHBOARD -->
+<div class="shell" id="vApp" hidden>
+  <header class="top">
+    <div class="brand"><svg viewBox="0 0 48 44" width="30" height="28" aria-hidden="true"><path d="M7 21 L8 4 L22 12Z M41 21 L40 4 L26 12Z" fill="#fff6ec" stroke="#7b3f35" stroke-width="2.4" stroke-linejoin="round"/><ellipse cx="24" cy="26" rx="19" ry="15" fill="#fff6ec" stroke="#7b3f35" stroke-width="2.4"/><circle cx="16" cy="25" r="2.3" fill="#4a2620"/><circle cx="32" cy="25" r="2.3" fill="#4a2620"/><path d="M22 29h4l-2 2.6z" fill="#e98a86"/></svg>ebeth admin</div>
+    <div class="who"><span class="chip" id="me"></span><span class="chip" id="live">connecting...</span><button id="out" type="button">Sign out</button></div>
+  </header>
+
+  <section class="stats" id="stats" aria-label="Totals"></section>
+
+  <div class="cols">
+    <section class="win" aria-label="Donation claims">
+      <div class="bar"><span>claims.csv</span><span class="x" aria-hidden="true">×</span></div>
+      <div class="pad">
+        <div class="tools">
+          <div class="seg" role="group" aria-label="Status filter" id="flt">
+            <button data-f="pending" aria-pressed="true">Pending</button>
+            <button data-f="approved" aria-pressed="false">Approved</button>
+            <button data-f="rejected" aria-pressed="false">Rejected</button>
+            <button data-f="all" aria-pressed="false">All</button>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="q" type="search" placeholder="Search claims" aria-label="Search claims"><button id="csv" type="button">Export CSV</button></div>
+        </div>
+        <div class="tw"><table><thead><tr><th>When</th><th>Who</th><th class="num">Amount</th><th>Message</th><th>Status</th><th></th></tr></thead><tbody id="claims"></tbody></table></div>
+        <p class="mute" style="margin:10px 0 0">Check the payment in PayPal or your QRPH app, then press <b>Approve</b>. The person's chat unlocks within seconds.</p>
+      </div>
+    </section>
+
+    <section class="win" aria-label="Donors">
+      <div class="bar"><span>donors.txt</span><span class="x" aria-hidden="true">×</span></div>
+      <div class="pad">
+        <div class="tw"><table style="min-width:0"><thead><tr><th>Donor</th><th class="num">Total</th><th></th></tr></thead><tbody id="donors"></tbody></table></div>
+        <p class="mute" style="margin:10px 0 0">Switching access off locks the chat for that person right away.</p>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="mod" id="rmod" hidden role="dialog" aria-modal="true" aria-labelledby="rT">
+  <div class="win">
+    <div class="bar"><span>reply.txt</span><button class="x" id="rX" type="button" aria-label="Close" style="border:0;box-shadow:none;background:none;padding:0 4px;font-size:18px">×</button></div>
+    <div class="pad" style="display:grid;gap:12px">
+      <h2 id="rT" style="font-size:16px">Reply to <span id="rWho"></span></h2>
+      <div><span class="k">Their message</span><div class="quote" id="rQuote"></div></div>
+      <div><label for="rText">Your reply</label><textarea id="rText" maxlength="600" placeholder="Thank them for the support. They will see this in their donation log."></textarea></div>
+      <p class="mute" style="margin:0">The donor sees this in My donation log on the site, next to their donation.</p>
+      <div class="foot"><button id="rCancel" type="button">Cancel</button><button class="primary" id="rSend" type="button">Send reply</button></div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* Same Firebase project as the main site. These values are public by design; Firestore rules do the protecting. */
+const FB_CONFIG={apiKey:"AIzaSyCS2kYuvvvAk7QGeyz8BqrzTxAToOWyKIY",authDomain:"ditokanalng.firebaseapp.com",projectId:"ditokanalng",storageBucket:"ditokanalng.firebasestorage.app",messagingSenderId:"1020824629551",appId:"1:1020824629551:web:2602d2758d1cc4d6a0b1da",measurementId:"G-8MQW1ZWHZV"};
+
+const $=id=>document.getElementById(id);
+async function diag(u){
+  const ids=["(default)","default"];
+  try{
+    const t=await u.getIdToken();
+    const res=await Promise.all(ids.map(async id=>{
+      try{const r=await fetch("https://firestore.googleapis.com/v1/projects/"+FB_CONFIG.projectId+"/databases/"+encodeURIComponent(id)+"/documents/admins/"+encodeURIComponent(u.uid),{headers:{Authorization:"Bearer "+t}});
+        const j=await r.json().catch(()=>({}));const m=(j.error&&j.error.message)||"";
+        return {id,st:r.status,m,found:r.status===200,docMissing:r.status===404&&/^Document/i.test(m),dbMissing:r.status===404&&!/^Document/i.test(m)}}
+      catch(e){return {id,st:0,m:e.message,net:true}}}));
+    const A=res[0],B=res[1];
+    let why;
+    if(A.net&&B.net)why="the browser cannot reach firestore.googleapis.com at all (ad blocker, VPN or network). Try another browser or network.";
+    else if(A.found)why="the admin document IS in (default), so rules and data are fine. The problem is the live connection: turn off ad blockers/VPN or try another network.";
+    else if(A.docMissing)why="the (default) database exists but has no admins document with this UID. Create admins/"+u.uid+" with field role=owner in the (default) database.";
+    else if(A.dbMissing&&B.found)why="FOUND THE CAUSE: your admins document is in a database named 'default', but this website only reads the standard '(default)' database, which does not exist. Create a Standard-edition database with ID (default) in Firebase console > Firestore Database > Add database, publish the same rules there, and add admins/"+u.uid+" (role=owner) in it.";
+    else if(A.dbMissing)why="the standard (default) database does not exist in this project. Create it (Firestore Database > Add database, ID (default)), publish your rules, and add admins/"+u.uid+" (role=owner).";
+    else if(A.st===403)why="Firestore denied the request: "+A.m;
+    else why="unexpected answer.";
+    return "Direct check -> (default): HTTP "+A.st+" ["+String(A.m).slice(0,90)+"]; default: HTTP "+B.st+" ["+String(B.m).slice(0,90)+"]. "+why+" Signed-in UID: "+u.uid}
+  catch(e){return "Direct check failed ("+e.message+"). Signed-in UID: "+u.uid}}
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function fail(t){$("eTxt").textContent=t;["vLogin","vDenied","vApp"].forEach(v=>$(v).hidden=true);$("vErr").hidden=false}
+if(location.protocol==="file:"||location.origin==="null"){fail("This page is opened as a local file or in a sandbox ("+location.protocol+"). Firebase Auth cannot work here. Upload it to https hosting (for example Firebase Hosting) and open it from that address.")}
+else if(!window.firebase){fail("The Firebase scripts did not load. Open this page over https (not as a file), allow www.gstatic.com, or host it on Firebase Hosting / Netlify / GitHub Pages.")}
+let auth,db,TS=()=>firebase.firestore.FieldValue.serverTimestamp();
+if(window.firebase){try{firebase.initializeApp(FB_CONFIG);auth=firebase.auth();db=firebase.firestore();try{db.settings({experimentalForceLongPolling:true,merge:true})}catch(e){}
+  setTimeout(()=>{if(!window.__af)fail("[page: "+location.href+" | framed: "+(top!==self)+" | indexedDB: "+(!!window.indexedDB)+"] Firebase Auth did not respond on "+location.hostname+". This page must be opened from an authorized https domain (Firebase console > Authentication > Settings > Authorized domains).")},8000)
+}catch(e){fail("Firebase failed to start: "+(e.code||e.message))}}
+let me=null,claims=[],donors=[],filter="pending",unsubs=[];
+
+function show(id){["vLogin","vDenied","vApp","vErr"].forEach(v=>$(v).hidden=v!==id)}
+function toast(t){const e=$("toast");e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>{e.hidden=true},2600)}
+function stop(){unsubs.forEach(u=>{try{u()}catch(e){}});unsubs=[]}
+const when=t=>{try{const d=t&&t.toDate?t.toDate():t?new Date(t):null;return d&&!isNaN(d)?d.toLocaleString([], {year:"numeric",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}):"just now"}catch(e){return"just now"}};
+const money=(n,c)=>{try{return new Intl.NumberFormat(undefined,{style:"currency",currency:c||"PHP",maximumFractionDigits:2}).format(n||0)}catch(e){return(c||"")+" "+(n||0)}};
+
+/* ---------- sign in ---------- */
+$("fLogin").addEventListener("submit",async e=>{e.preventDefault();if(!auth)return;const m=$("lmsg");m.hidden=true;$("go").disabled=true;
+  try{await auth.signInWithEmailAndPassword($("em").value.trim(),$("pw").value)}
+  catch(x){m.textContent=/invalid-credential|wrong-password|user-not-found|invalid-email/.test(x.code||"")?"That email and password did not match.":"Sign-in failed ("+(x.code||x.message)+").";m.hidden=false}
+  $("go").disabled=false});
+$("out").onclick=$("dOut").onclick=()=>auth&&auth.signOut();
+if(auth)auth.onAuthStateChanged(async u=>{window.__af=true;
+  stop();me=u;
+  if(!u){claims=[];donors=[];show("vLogin");return}
+  let isAdmin=false;
+  try{isAdmin=(await Promise.race([db.collection("admins").doc(u.uid).get(),new Promise((_,r)=>setTimeout(()=>r({code:"timeout"}),12000))])).exists}catch(e){console.error(e);if(e.code!=="permission-denied"){fail("Signed in, but could not check admin access ("+(e.code||e.message)+"). "+((e.code==="timeout"||e.code==="unavailable")?await diag(u):""));return}}
+  if(!isAdmin){$("dMail").textContent=u.email||"";$("dUid").textContent=u.uid;show("vDenied");return}
+  $("me").textContent=u.email;show("vApp");start()},e=>fail("Auth error: "+(e.code||e.message)));
+
+function start(){
+  unsubs.push(db.collection("donationClaims").orderBy("created","desc").limit(500).onSnapshot(sn=>{claims=sn.docs.map(d=>Object.assign({id:d.id},d.data()));$("live").textContent="live";paint()},err=>{$("live").textContent="no access";toast("Could not read claims: "+(err.code||err.message))}));
+  unsubs.push(db.collection("donors").onSnapshot(sn=>{donors=sn.docs.map(d=>Object.assign({uid:d.id},d.data()));paint()},err=>toast("Could not read donors: "+(err.code||err.message))))}
+
+/* ---------- numbers ---------- */
+function sums(list){const m={};list.forEach(c=>{const k=c.currency||"PHP";m[k]=(m[k]||0)+(+c.amount||0)});return m}
+function multi(m){const k=Object.keys(m);return k.length?`<span class="multi">${k.map(c=>`<b>${esc(money(m[c],c))}</b>`).join("")}</span>`:`<b>${esc(money(0,"PHP"))}</b>`}
+function paintStats(){
+  const ap=claims.filter(c=>c.status==="approved"),pe=claims.filter(c=>c.status==="pending"),act=donors.filter(d=>d.active!==false).length;
+  $("stats").innerHTML=
+   `<div class="win stat"><span class="k">Confirmed total</span>${multi(sums(ap))}<small>${ap.length} approved donation${ap.length===1?"":"s"}</small></div>`+
+   `<div class="win stat"><span class="k">Waiting for you</span><b>${pe.length}</b><small>${pe.length?esc(Object.entries(sums(pe)).map(([c,v])=>money(v,c)).join(" + "))+" to cross-check":"All caught up"}</small></div>`+
+   `<div class="win stat"><span class="k">Chat unlocked</span><b>${act}</b><small>${donors.length} donor${donors.length===1?"":"s"} on record</small></div>`+
+   `<div class="win stat"><span class="k">All claims</span><b>${claims.length}</b><small>${claims.filter(c=>c.status==="rejected").length} rejected</small></div>`}
+
+/* ---------- claims ---------- */
+function shown(){const q=$("q").value.trim().toLowerCase();return claims.filter(c=>(filter==="all"||c.status===filter)&&(!q||[c.email,c.name,c.ref,c.feedback,c.adminReply].join(" ").toLowerCase().includes(q)))}
+function paintClaims(){
+  const L=shown();
+  $("claims").innerHTML=L.length?L.map(c=>{
+    const st=c.status||"pending";
+    const acts=st==="pending"?`<button class="sm ok" data-a="approve" data-id="${esc(c.id)}">Approve</button><button class="sm bad" data-a="reject" data-id="${esc(c.id)}">Reject</button>`
+      :st==="rejected"?`<button class="sm ok" data-a="approve" data-id="${esc(c.id)}">Approve</button>`
+      :`<button class="sm" data-a="reopen" data-id="${esc(c.id)}">Move to pending</button>`;
+    const rb=`<button class="sm" data-r="${esc(c.id)}">${c.adminReply?"Edit reply":"Reply"}</button>`;
+    const msgc=(c.feedback||c.ref)?esc(c.feedback||c.ref):`<span class="mute">(no message)</span>`;
+    return `<tr><td>${esc(when(c.created))}</td><td><span class="em">${esc(c.email||"(no email)")}</span>${c.name?`<span class="sub">${esc(c.name)}</span>`:""}</td><td class="num">${esc(money(c.amount,c.currency))}</td><td class="msgc">${msgc}${c.adminReply?`<span class="rep"><b>Your reply</b>${esc(c.adminReply)}</span>`:""}</td><td><span class="pill ${esc(st)}">${esc(st)}</span></td><td><div class="acts">${rb}${acts}</div></td></tr>`}).join("")
+   :`<tr><td colspan="6" class="empty">${filter==="pending"&&!$("q").value?"Nothing waiting. Nice!":"No claims match."}</td></tr>`}
+document.addEventListener("click",async e=>{
+  const f=e.target.closest("#flt button");if(f){filter=f.dataset.f;document.querySelectorAll("#flt button").forEach(b=>b.setAttribute("aria-pressed",String(b===f)));paintClaims();return}
+  const b=e.target.closest("button[data-a]");if(!b)return;
+  const c=claims.find(x=>x.id===b.dataset.id);if(!c)return;
+  b.disabled=true;
+  try{
+    if(b.dataset.a==="approve"){
+      const w=db.batch();
+      w.set(db.collection("donors").doc(c.uid),{active:true,email:c.email||"",approvedAt:TS(),approvedBy:me.email},{merge:true});
+      w.update(db.collection("donationClaims").doc(c.id),{status:"approved",reviewedAt:TS(),reviewedBy:me.email});
+      await w.commit();toast("Approved. Chat unlocked for "+(c.email||"that user")+".")}
+    else if(b.dataset.a==="reject"){await db.collection("donationClaims").doc(c.id).update({status:"rejected",reviewedAt:TS(),reviewedBy:me.email});toast("Rejected.")}
+    else{await db.collection("donationClaims").doc(c.id).update({status:"pending",reviewedAt:TS(),reviewedBy:me.email});toast("Moved back to pending.")}
+  }catch(x){toast("That did not save: "+(x.code||x.message));b.disabled=false}
+});
+$("q").addEventListener("input",paintClaims);
+
+/* ---------- donors ---------- */
+function paintDonors(){
+  const tot={};claims.filter(c=>c.status==="approved").forEach(c=>{(tot[c.uid]=tot[c.uid]||{})[c.currency||"PHP"]=((tot[c.uid]||{})[c.currency||"PHP"]||0)+(+c.amount||0)});
+  const L=donors.slice().sort((a,b)=>String(a.email).localeCompare(String(b.email)));
+  $("donors").innerHTML=L.length?L.map(d=>{const on=d.active!==false,t=tot[d.uid]||{};
+    return `<tr><td><span class="em">${esc(d.email||d.uid)}</span><span class="sub"><span class="pill ${on?"on":"off"}">${on?"chat on":"chat off"}</span></span></td><td class="num">${Object.keys(t).length?Object.keys(t).map(c=>esc(money(t[c],c))).join("<br>"):"-"}</td><td><div class="acts"><button class="sm ${on?"bad":"ok"}" data-d="${esc(d.uid)}" data-on="${on?"1":"0"}">${on?"Turn off":"Turn on"}</button></div></td></tr>`}).join("")
+   :`<tr><td colspan="3" class="empty">No donors yet.</td></tr>`}
+document.addEventListener("click",async e=>{const b=e.target.closest("button[data-d]");if(!b)return;b.disabled=true;
+  try{await db.collection("donors").doc(b.dataset.d).set({active:b.dataset.on!=="1"},{merge:true});toast(b.dataset.on==="1"?"Chat turned off.":"Chat turned on.")}
+  catch(x){toast("That did not save: "+(x.code||x.message));b.disabled=false}});
+
+/* ---------- reply to a donor ---------- */
+let replyId=null;
+const closeReply=()=>{$("rmod").hidden=true;replyId=null};
+document.addEventListener("click",e=>{const b=e.target.closest("button[data-r]");if(!b)return;
+  const c=claims.find(x=>x.id===b.dataset.r);if(!c)return;
+  replyId=c.id;$("rWho").textContent=c.email||"donor";$("rQuote").textContent=c.feedback||c.ref||"(they did not leave a message)";$("rText").value=c.adminReply||"";$("rmod").hidden=false;$("rText").focus()});
+$("rX").onclick=$("rCancel").onclick=closeReply;
+$("rmod").addEventListener("click",e=>{if(e.target===$("rmod"))closeReply()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("rmod").hidden)closeReply()});
+$("rSend").onclick=async()=>{const t=$("rText").value.trim().slice(0,600);if(!replyId)return;if(!t){toast("Type a reply first.");return}
+  $("rSend").disabled=true;
+  try{await db.collection("donationClaims").doc(replyId).update({adminReply:t,repliedAt:TS(),repliedBy:me.email});toast("Reply sent.");closeReply()}
+  catch(x){toast("That did not save: "+(x.code||x.message))}
+  $("rSend").disabled=false};
+
+/* ---------- csv ---------- */
+$("csv").onclick=()=>{
+  const q=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"',rows=[["date","email","name","amount","currency","message","admin reply","status"]].concat(shown().map(c=>[when(c.created),c.email,c.name,c.amount,c.currency,c.feedback||c.ref,c.adminReply,c.status]));
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([rows.map(r=>r.map(q).join(",")).join("\n")],{type:"text/csv"}));a.download="ebeth-donations.csv";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};
+
+function paint(){paintStats();paintClaims();paintDonors()}
+</script>
+</body>
+</html>
